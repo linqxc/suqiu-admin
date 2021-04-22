@@ -237,8 +237,8 @@
             value: "newOff"
           },
           {
-            label: "删除商品",
-            value: "deleteProduct"
+            label: "移入回收站",
+            value: "recycle"
           }
         ],
         operateType: null,
