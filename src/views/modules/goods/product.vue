@@ -59,7 +59,7 @@
           <template slot-scope="scope">{{scope.row.id}}</template>
         </el-table-column>
         <el-table-column label="商品图片" width="120" align="center">
-          <template slot-scope="scope"><img style="height: 80px" :src="scope.row.pic"></template>
+          <template slot-scope="scope"><img style="height: 80px" :src="scope.row.image"></template>
         </el-table-column>
         <el-table-column label="商品名称" align="center">
           <template slot-scope="scope">
@@ -69,15 +69,14 @@
         </el-table-column>
         <el-table-column label="价格/货号" width="120" align="center">
           <template slot-scope="scope">
-            <p>价格：￥{{scope.row.price}}</p>
-            <p>货号：{{scope.row.productSn}}</p>
+            <p>货号：{{scope.row.sn}}</p>
           </template>
         </el-table-column>
         <el-table-column label="标签" width="140" align="center">
           <template slot-scope="scope">
             <p>上架：
               <el-switch @change="handlePublishStatusChange(scope.$index, scope.row)" :active-value="1"
-                :inactive-value="0" v-model="scope.row.publishStatus">
+                :inactive-value="0" v-model="scope.row.isMarketable">
               </el-switch>
             </p>
             <p>新品：
@@ -85,15 +84,12 @@
                 v-model="scope.row.newStatus">
               </el-switch>
             </p>
-            <p>推荐：
+            <p>人气：
               <el-switch @change="handleRecommendStatusChange(scope.$index, scope.row)" :active-value="1"
-                :inactive-value="0" v-model="scope.row.recommandStatus">
+                :inactive-value="0" v-model="scope.row.peopleStatus">
               </el-switch>
             </p>
           </template>
-        </el-table-column>
-        <el-table-column label="排序" width="100" align="center">
-          <template slot-scope="scope">{{scope.row.sort}}</template>
         </el-table-column>
         <el-table-column label="SKU库存" width="100" align="center">
           <template slot-scope="scope">
@@ -102,28 +98,20 @@
           </template>
         </el-table-column>
         <el-table-column label="销量" width="100" align="center">
-          <template slot-scope="scope">{{scope.row.sale}}</template>
+          <template slot-scope="scope">{{scope.row.saleNum}}</template>
         </el-table-column>
         <el-table-column label="审核状态" width="100" align="center">
           <template slot-scope="scope">
-            <p>{{scope.row.verifyStatus | verifyStatusFilter}}</p>
-            <p>
-              <el-button type="text" @click="handleShowVerifyDetail(scope.$index, scope.row)">审核详情
-              </el-button>
-            </p>
+            <p>{{scope.row.status | verifyStatusFilter}}</p>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="160" align="center">
           <template slot-scope="scope">
             <p>
-              <el-button size="mini" @click="handleShowProduct(scope.$index, scope.row)">查看
-              </el-button>
               <el-button size="mini" @click="handleUpdateProduct(scope.$index, scope.row)">编辑
               </el-button>
             </p>
             <p>
-              <el-button size="mini" @click="handleShowLog(scope.$index, scope.row)">日志
-              </el-button>
               <el-button size="mini" type="danger" @click="handleDelete(scope.$index, scope.row)">删除
               </el-button>
             </p>
@@ -233,11 +221,11 @@
             value: "publishOff"
           },
           {
-            label: "设为推荐",
+            label: "设为人气推荐",
             value: "recommendOn"
           },
           {
-            label: "取消推荐",
+            label: "取消人气推荐",
             value: "recommendOff"
           },
           {
@@ -249,12 +237,8 @@
             value: "newOff"
           },
           {
-            label: "转移到分类",
-            value: "transferCategory"
-          },
-          {
-            label: "移入回收站",
-            value: "recycle"
+            label: "删除商品",
+            value: "deleteProduct"
           }
         ],
         operateType: null,
@@ -267,24 +251,24 @@
         productCateOptions: [],
         brandOptions: [],
         publishStatusOptions: [{
-          value: 1,
+          value: "1",
           label: '上架'
         }, {
-          value: 0,
+          value: "0",
           label: '下架'
         }],
         verifyStatusOptions: [{
-          value: 1,
+          value: "1",
           label: '审核通过'
         }, {
-          value: 0,
+          value: "0",
           label: '未审核'
         }]
       }
     },
     created() {
-      // this.getList();
-      // this.getBrandList();
+      this.getList();
+      this.getBrandList();
       this.getProductCateList();
     },
     mounted() {
@@ -292,7 +276,7 @@
     },
     watch: {
       selectProductCateValue: function(newValue) {
-        if (newValue != null && newValue.length == 2) {
+        if (newValue != null && newValue.length == 3) {
           this.listQuery.productCategoryId = newValue[1];
         } else {
           this.listQuery.productCategoryId = null;
@@ -302,7 +286,7 @@
     },
     filters: {
       verifyStatusFilter(value) {
-        if (value === 1) {
+        if (value === "1") {
           return '审核通过';
         } else {
           return '未审核';
@@ -320,26 +304,41 @@
       },
       getList() {
         this.listLoading = true;
-        fetchList(this.listQuery).then(response => {
-          this.listLoading = false;
-          this.list = response.data.list;
-          this.total = response.data.total;
-        });
+        this.$http({
+          url: this.$http.adornUrl('/spu/list'),
+          method: 'post',
+          data: this.$http.adornData(this.listQuery)
+        }).then(({data}) => {
+          if (data.status === 1) {
+            this.list = data.data.list
+            this.total = data.data.total
+            this.totalPage = data.data.totalPage;
+            this.pageSize = data.data.pageSize;
+            this.listLoading = false
+          }
+
+        })
       },
       getBrandList() {
-        fetchBrandList({
-          pageNum: 1,
-          pageSize: 100
-        }).then(response => {
-          this.brandOptions = [];
-          let brandList = response.data.list;
-          for (let i = 0; i < brandList.length; i++) {
+        this.listLoading = true
+        this.$http({
+          url: this.$http.adornUrl('/brand/list'),
+          method: 'post',
+          data: this.$http.adornData(this.listQuery)
+        }).then(({data}) => {
+          if (data.status === 1) {
+            let brandList = data.data.list
+            for (let i = 0; i < brandList.length; i++) {
             this.brandOptions.push({
               label: brandList[i].name,
               value: brandList[i].id
             });
           }
-        });
+            this.listLoading = false
+          }
+
+        })
+        
       },
       getProductCateList() {
         this.$http({
@@ -388,7 +387,7 @@
       handleShowSkuEditDialog(index, row) {
         this.editSkuInfo.dialogVisible = true;
         this.editSkuInfo.productId = row.id;
-        this.editSkuInfo.productSn = row.productSn;
+        this.editSkuInfo.productSn = row.sn;
         this.editSkuInfo.productAttributeCategoryId = row.productAttributeCategoryId;
         this.editSkuInfo.keyword = null;
         fetchSkuStockList(row.id, {
@@ -515,7 +514,7 @@
       handlePublishStatusChange(index, row) {
         let ids = [];
         ids.push(row.id);
-        this.updatePublishStatus(row.publishStatus, ids);
+        this.updatePublishStatus(row.isMarketable, ids);
       },
       handleNewStatusChange(index, row) {
         let ids = [];
@@ -525,7 +524,7 @@
       handleRecommendStatusChange(index, row) {
         let ids = [];
         ids.push(row.id);
-        this.updateRecommendStatus(row.recommandStatus, ids);
+        this.updateRecommendStatus(row.peopleStatus, ids);
       },
       handleResetSearch() {
         this.selectProductCateValue = [];
@@ -560,52 +559,67 @@
         console.log("handleShowLog", row);
       },
       updatePublishStatus(publishStatus, ids) {
+        this.listLoading = true
         let params = new URLSearchParams();
         params.append('ids', ids);
         params.append('publishStatus', publishStatus);
-        updatePublishStatus(params).then(response => {
-          this.$message({
-            message: '修改成功',
-            type: 'success',
-            duration: 1000
-          });
-        });
+        this.$http({
+          url: this.$http.adornUrl('/spu/updateIsMarketable'),
+          method: 'post',
+          params: params
+        }).then(({data}) => {
+          if (data.status === 1) {
+            this.listLoading = false
+          }
+
+        })
       },
       updateNewStatus(newStatus, ids) {
+        this.listLoading = true
         let params = new URLSearchParams();
         params.append('ids', ids);
-        params.append('newStatus', newStatus);
-        updateNewStatus(params).then(response => {
-          this.$message({
-            message: '修改成功',
-            type: 'success',
-            duration: 1000
-          });
-        });
+        params.append('recommendStatus', newStatus);
+        this.$http({
+          url: this.$http.adornUrl('/smsPeopleRecommend/isNewRecommend'),
+          method: 'post',
+          params: params
+        }).then(({data}) => {
+          if (data.status === 1) {
+            this.listLoading = false
+          }
+
+        })
       },
       updateRecommendStatus(recommendStatus, ids) {
         let params = new URLSearchParams();
         params.append('ids', ids);
         params.append('recommendStatus', recommendStatus);
-        updateRecommendStatus(params).then(response => {
-          this.$message({
-            message: '修改成功',
-            type: 'success',
-            duration: 1000
-          });
-        });
+        this.$http({
+          url: this.$http.adornUrl('/smsPeopleRecommend/isPeopleRecommend'),
+          method: 'post',
+          params: params
+        }).then(({data}) => {
+          if (data.status === 1) {
+            this.listLoading = false
+          }
+
+        })
       },
       updateDeleteStatus(deleteStatus, ids) {
+        this.listLoading = true
         let params = new URLSearchParams();
         params.append('ids', ids);
         params.append('deleteStatus', deleteStatus);
-        updateDeleteStatus(params).then(response => {
-          this.$message({
-            message: '删除成功',
-            type: 'success',
-            duration: 1000
-          });
-        });
+        this.$http({
+          url: this.$http.adornUrl('/spu/deleteSpu'),
+          method: 'post',
+          params: params
+        }).then(({data}) => {
+          if (data.status === 1) {
+            this.listLoading = false
+          }
+
+        })
         this.getList();
       }
     }
