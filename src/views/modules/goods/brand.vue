@@ -170,14 +170,13 @@
             this.pageSize = data.data.pageSize;
             this.listLoading = false
           }
-
         })
       },
       handleSelectionChange(val) {
         this.multipleSelection = val;
       },
       handleUpdate(index, row) {
-        this.$router.push({path: '/pms/updateBrand', query: {id: row.id}})
+        this.$router.push({path: 'goods-updateBrand', query: {id: row.id}})
       },
       handleDelete(index, row) {
         this.$confirm('是否要删除该品牌', '提示', {
@@ -185,14 +184,14 @@
           cancelButtonText: '取消',
           type: 'warning'
         }).then(() => {
-          deleteBrand(row.id).then(response => {
-            this.$message({
-              message: '删除成功',
-              type: 'success',
-              duration: 1000
-            });
-            this.getList();
-          });
+          this.$http({
+          url: this.$http.adornUrl('/brand/delete/' + this.row.id),
+          method: 'post',
+        }).then(({data}) => {
+          if (data.status === 1) {
+            this.getList()
+          }
+        })
         });
       },
       getProductList(index, row) {
@@ -205,38 +204,30 @@
         var data = new URLSearchParams();
         data.append("ids", row.id);
         data.append("factoryStatus", row.factoryStatus);
-        updateFactoryStatus(data).then(response => {
-          this.$message({
-            message: '修改成功',
-            type: 'success',
-            duration: 1000
-          });
-        }).catch(error => {
-          if (row.factoryStatus === 0) {
-            row.factoryStatus = 1;
-          } else {
-            row.factoryStatus = 0;
+        this.$http({
+          url: this.$http.adornUrl('/brand/isFactoryStatus'),
+          method: 'post',
+          params: data
+        }).then(({data}) => {
+          if (data.status === 1) {
+            this.getList()
           }
-        });
+        })
       },
       handleShowStatusChange(index, row) {
         let data = new URLSearchParams();
         ;
         data.append("ids", row.id);
         data.append("showStatus", row.showStatus);
-        updateShowStatus(data).then(response => {
-          this.$message({
-            message: '修改成功',
-            type: 'success',
-            duration: 1000
-          });
-        }).catch(error => {
-          if (row.showStatus === 0) {
-            row.showStatus = 1;
-          } else {
-            row.showStatus = 0;
+        this.$http({
+          url: this.$http.adornUrl('/brand/update/showStatus'),
+          method: 'post',
+          params: data
+        }).then(({data}) => {
+          if (data.status === 1) {
+            this.getList()
           }
-        });
+        })
       },
       handleSizeChange(val) {
         this.listQuery.pageNum = 1;
@@ -250,6 +241,9 @@
       searchBrandList() {
         this.listQuery.pageNum = 1;
         this.getList();
+      },
+      addBrand() {
+        this.$router.push({path: 'goods-addBrand'})
       },
       handleBatchOperate() {
         console.log(this.multipleSelection);
@@ -281,17 +275,15 @@
         let data = new URLSearchParams();
         data.append("ids", ids);
         data.append("showStatus", showStatus);
-        updateShowStatus(data).then(response => {
-          this.getList();
-          this.$message({
-            message: '修改成功',
-            type: 'success',
-            duration: 1000
-          });
-        });
-      },
-      addBrand() {
-        this.$router.push({path: '/pms/addBrand'})
+        this.$http({
+          url: this.$http.adornUrl('/brand/update/showStatus'),
+          method: 'post',
+          params: data
+        }).then(({data}) => {
+          if (data.status === 1) {
+            this.getList()
+          }          
+        })
       }
     }
   }
